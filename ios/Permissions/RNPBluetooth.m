@@ -9,22 +9,32 @@
 #import "RNPBluetooth.h"
 #import <CoreBluetooth/CoreBluetooth.h>
 
-@interface RNPBluetooth() <CBPeripheralDelegate>
-@property (strong, nonatomic) CBPeripheralManager* peripheralManager;
+@interface RNPBluetooth() <CBCentralManagerDelegate>
+@property (class) CBCentralManager* centralManager;
 @property (copy) void (^completionHandler)(NSString *);
 @end
 
 @implementation RNPBluetooth
 
+static CBCentralManager * _centralManager;
+
++ (CBCentralManager *)centralManager {
+    return _centralManager;
+}
+
++ (void)setCentralManager:(CBCentralManager *)centralManager {
+    _centralManager = centralManager;
+}
+
 + (NSString *)getStatus
 {
-    int status = [CBPeripheralManager authorizationStatus];
+    int status = self.centralManager.state;
     switch (status) {
-        case CBPeripheralManagerAuthorizationStatusAuthorized:
+        case CBCentralManagerStatePoweredOn:
             return RNPStatusAuthorized;
-        case CBPeripheralManagerAuthorizationStatusDenied:
+        case CBCentralManagerStatePoweredOff:
             return RNPStatusDenied;
-        case CBPeripheralManagerAuthorizationStatusRestricted:
+        case CBCentralManagerStateUnauthorized:
             return RNPStatusRestricted;
         default:
             return RNPStatusUndetermined;
@@ -37,30 +47,26 @@
     
     if (status == RNPStatusUndetermined) {
         self.completionHandler = completionHandler;
-        
-        self.peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil];
-        [self.peripheralManager startAdvertising:@{}];
+        self.class.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
     } else {
         completionHandler(status);
     }
 }
 
-- (void) peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheralManager
-{
-    if (self.peripheralManager) {
-        [self.peripheralManager stopAdvertising];
-        self.peripheralManager.delegate = nil;
-        self.peripheralManager = nil;
+- (void)centralManagerDidUpdateState:(nonnull CBCentralManager *)central {
+    
+    NSString *status = [self.class getStatus];
+    
+    if (self.class.centralManager == CBManagerStateUnknown) {
+        return;
     }
     
     if (self.completionHandler) {
         //for some reason, checking permission right away returns denied. need to wait a tiny bit
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            self.completionHandler([self.class getStatus]);
-            self.completionHandler = nil;
+            self.completionHandler(status);
         });
     }
-    
 }
 
 @end
