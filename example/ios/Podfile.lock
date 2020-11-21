@@ -162,8 +162,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/Libraries/WebSocket"
   ReactNativePermissions:
     :path: "../node_modules/react-native-permissions"
-  RNCAsyncStorage:
-    :path: "../node_modules/@react-native-community/async-storage"
   yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
